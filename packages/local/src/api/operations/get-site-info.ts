@@ -23,6 +23,18 @@ export default function getSiteInfoOperation({}: OperationContext<any>) {
     return Promise.resolve({
       categories: [
         {
+          id: 'men',
+          name: 'Men',
+          slug: 'men',
+          path: '/men',
+        },
+        {
+          id: 'women',
+          name: 'Women',
+          slug: 'women',
+          path: '/women',
+        },
+        {
           id: 'accesories',
           name: 'Accesories',
           slug: 'accesories',
