@@ -24,9 +24,44 @@ func main() {
 		panic(err.Error())
 	}
 	defer db.Close()
+	http.HandleFunc("/login", loginHandler)
+	http.HandleFunc("/loginauth", loginAuthHandler)
 	http.HandleFunc("/register", registerHandler)
-	http.HandleFunc("registerauth", registerAuthHandler)
+	http.HandleFunc("/registerauth", registerAuthHandler)
 	http.ListenAndServe("localhost:8080", nil)
+}
+func loginHandler(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("*****loginHandler running*****")
+	tpl.ExecuteTemplate(w, "login.html", nil)
+}
+
+// loginAuthHandler authenticates user login
+func loginAuthHandler(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("*****loginAuthHandler running*****")
+	r.ParseForm()
+	username := r.FormValue("username")
+	password := r.FormValue("password")
+	fmt.Println("username:", username, "password:", password)
+	// retrieve password from db to compare (hash) with user supplied password's hash
+	var hash string
+	stmt := "SELECT Hash FROM bcrypt WHERE Username = ?"
+	row := db.QueryRow(stmt, username)
+	err := row.Scan(&hash)
+	fmt.Println("hash from db:", hash)
+	if err != nil {
+		fmt.Println("error selecting Hash in db by Username")
+		tpl.ExecuteTemplate(w, "login.html", "check username and password")
+		return
+	}
+	// func CompareHashAndPassword(hashedPassword, password []byte) error
+	err = bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
+	// returns nill on succcess
+	if err == nil {
+		fmt.Fprint(w, "You have successfully logged in :)")
+		return
+	}
+	fmt.Println("incorrect password")
+	tpl.ExecuteTemplate(w, "login.html", "check username and password")
 }
 
 // loginHandler serves form for users to login with
