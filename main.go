@@ -7,90 +7,108 @@ import (
 	"net/http"
 	"unicode"
 
-	"golang.org/x/crypto/bcrypt"
+	//	"io/ioutil" //old
+	//	"net/http" //old
 
 	_ "github.com/go-sql-driver/mysql"
+	"golang.org/x/crypto/bcrypt"
 )
 
 var tpl *template.Template
 var db *sql.DB
 
 func main() {
+
+	tpl, _ = template.ParseGlob("templates/*.html")
 	var err error
-	tpl, err = template.ParseGlob("templates/*.html")
-	if err != nil {
-		fmt.Println("Parsing Templates Error:")
-		panic(err.Error)
-	}
-	var db *sql.DB
 	db, err = sql.Open("mysql", "root:password@tcp(localhost:3306)/testdb")
 	if err != nil {
-		fmt.Println("Openning DB Error:")
 		panic(err.Error())
 	}
 	defer db.Close()
+	http.HandleFunc("/login", loginHandler)
+	http.HandleFunc("/loginauth", loginAuthHandler)
 	http.HandleFunc("/register", registerHandler)
 	http.HandleFunc("/registerauth", registerAuthHandler)
 	http.ListenAndServe("localhost:8080", nil)
 }
-
-// registerHandler serves form for registring new users
-func registerHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("*****registerHandler running*****")
-	tpl.ExecuteTemplate(w, "register.html", nil)
+func loginHandler(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("*****loginHandler running*****")
+	tpl.ExecuteTemplate(w, "login.html", nil)
 }
 
-// registerAuthHandler creates new user in database
-func registerAuthHandler(w http.ResponseWriter, r *http.Request) {
-	/*
-		1. check username criteria
-		2. check password criteria
-		3. check if username is already exists in database
-		4. create bcrypt hash from password
-		5. insert username and password hash in database
-		(email validation will be in another video)
-	*/
-	fmt.Println("*****registerAuthHandler running*****")
+// loginAuthHandler authenticates user login
+func loginAuthHandler(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("*****loginAuthHandler running*****")
 	r.ParseForm()
 	username := r.FormValue("username")
-	// check username for only alphaNumeric characters
+	password := r.FormValue("password")
+	fmt.Println("username:", username, "password:", password)
+	// retrieve password from db to compare (hash) with user supplied password's hash
+	var hash string
+	stmt := "SELECT Hash FROM bcrypt WHERE Username = ?"
+	row := db.QueryRow(stmt, username)
+	err := row.Scan(&hash)
+	fmt.Println("hash from db:", hash)
+	if err != nil {
+		fmt.Println("error selecting Hash in db by Username")
+		tpl.ExecuteTemplate(w, "login.html", "check username and password")
+		return
+	}
+	// func CompareHashAndPassword(hashedPassword, password []byte) error
+	err = bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
+	// returns nill on succcess
+	if err == nil {
+		fmt.Fprint(w, "You have successfully logged in :)")
+		return
+	}
+	fmt.Println("incorrect password")
+	tpl.ExecuteTemplate(w, "login.html", "check username and password")
+}
+
+// loginHandler serves form for users to login with
+func registerHandler(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("*****RegisterHandler running*****")
+	tpl.ExecuteTemplate(w, "register.html", nil)
+}
+func registerAuthHandler(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("*****RegisterAuthHandler running*****")
+	r.ParseForm()
+	username := r.FormValue("username")
+	// checks for username - alphaNumeric characters
+
 	var nameAlphaNumeric = true
 	for _, char := range username {
-		// func IsLetter(r rune) bool, func IsNumber(r rune) bool
-		// if !unicode.IsLetter(char) && !unicode.IsNumber(char) {
 		if unicode.IsLetter(char) == false && unicode.IsNumber(char) == false {
 			nameAlphaNumeric = false
 		}
 	}
-	// check username length
+	// checking username passwordLenth
 	var nameLength bool
 	if 5 <= len(username) && len(username) <= 50 {
 		nameLength = true
 	}
-	// check password criteria
+
+	// check password criteroa
 	password := r.FormValue("password")
 	fmt.Println("password:", password, "\npswdLength:", len(password))
-	// variables that must pass for password creation criteria
+	// variables that must password creation criteria
 	var pswdLowercase, pswdUppercase, pswdNumber, pswdSpecial, pswdLength, pswdNoSpaces bool
 	pswdNoSpaces = true
 	for _, char := range password {
 		switch {
-		// func IsLower(r rune) bool
 		case unicode.IsLower(char):
 			pswdLowercase = true
-		// func IsUpper(r rune) bool
 		case unicode.IsUpper(char):
 			pswdUppercase = true
-		// func IsNumber(r rune) bool
 		case unicode.IsNumber(char):
 			pswdNumber = true
-		// func IsPunct(r rune) bool, func IsSymbol(r rune) bool
 		case unicode.IsPunct(char) || unicode.IsSymbol(char):
 			pswdSpecial = true
-		// func IsSpace(r rune) bool, type rune = int32
 		case unicode.IsSpace(int32(char)):
 			pswdNoSpaces = false
 		}
+
 	}
 	if 11 < len(password) && len(password) < 60 {
 		pswdLength = true
@@ -131,7 +149,7 @@ func registerAuthHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer insertStmt.Close()
 	var result sql.Result
-	//  func (s *Stmt) Exec(args ...interface{}) (Result, error)
+	// func (s *Stmt) Exec(args ...interface{}) (Result, error)
 	result, err = insertStmt.Exec(username, hash)
 	rowsAff, _ := result.RowsAffected()
 	lastIns, _ := result.LastInsertId()
@@ -144,4 +162,35 @@ func registerAuthHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	fmt.Fprint(w, "congrats, your account has been successfully created")
+
 }
+
+/*  old
+(forever 21 API)
+url := "https://apidojo-forever21-v1.p.rapidapi.com/products/v2/list?category=women_main&pageSize=48&pageNumber=1&sortby=0&filterColor=BLACK&filterSize=XS%2FS"
+req, _ := http.NewRequest("GET", url, nil)
+req.Header.Add("X-RapidAPI-Key", "1aa5b6fa64msh21e535afc50d574p1e0eadjsnd37ae1fe22f2")
+req.Header.Add("X-RapidAPI-Host", "apidojo-forever21-v1.p.rapidapi.com")
+res, _ := http.DefaultClient.Do(req)
+defer res.Body.Close()
+body, _ := ioutil.ReadAll(res.Body)
+fmt.Println(res)
+fmt.Println(string(body))
+/* user authentication
+1. check user name criteria
+2. check paswworkd criteria
+3. check if username already exists in database
+4. creat bctypt hash from password
+5.insert username and password has in database
+(email validation will be next...?)
+*/
+
+/*
+- user account (login system)
+- backened database saves info (whhether they exist or prompt to )
+- favorite items (store in an array)
+-
+- later on:
+- shopping cart/ payment page ^ arrary like favorites
+- test backend
+*/
