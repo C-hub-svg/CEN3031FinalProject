@@ -25,7 +25,7 @@ Backend:
  * registerAuthHandler(w http.ResponseWriter, r  *http.Request)
 	 * takes in username and password
 	 * checks that it fulfills all requirements
-		 * if so, adds to database
+		 * if so, adds to database, redirects to homepage
 		 * if not, returns error message
 
 ## Bugs: 
