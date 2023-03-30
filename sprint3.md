@@ -11,7 +11,13 @@
  - filtering capabilities
 
 ## Frontend Unit Tests
+- loads webpage
+- adds item to wishlist
 ## Backend Unit Tests
+- queries "white dress"
+- registsers with faulty username
+- registers with faulty password
+- regsietrs with valid username and password 
 ## API Documentation  
  - pushProduct(n, u, i, p, d)
 	 - pushes product info into the data JSON
