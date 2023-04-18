@@ -7,12 +7,13 @@ import (
 	"net/http"
 	"unicode"
 
-	"golang.org/x/crypto/bcrypt"
+	"golang.org/x/crypto/bcrypt" // for storing passwords
 
-	_ "github.com/go-sql-driver/mysql"
+	_ "github.com/go-sql-driver/mysql" // database
 )
 
 var tpl *template.Template
+
 var db *sql.DB
 
 func main() {
@@ -29,8 +30,8 @@ func main() {
 		panic(err.Error())
 	}
 	defer db.Close()
-	http.HandleFunc("/register", registerHandler)
-	http.HandleFunc("/registerauth", registerAuthHandler)
+	http.HandleFunc("/register", registerHandler)         //handler 1
+	http.HandleFunc("/registerauth", registerAuthHandler) //handler 2
 	http.ListenAndServe("localhost:8080", nil)
 }
 
@@ -95,9 +96,11 @@ func registerAuthHandler(w http.ResponseWriter, r *http.Request) {
 	if 11 < len(password) && len(password) < 60 {
 		pswdLength = true
 	}
+
+	//if password doesnt meet criteria
 	fmt.Println("pswdLowercase:", pswdLowercase, "\npswdUppercase:", pswdUppercase, "\npswdNumber:", pswdNumber, "\npswdSpecial:", pswdSpecial, "\npswdLength:", pswdLength, "\npswdNoSpaces:", pswdNoSpaces, "\nnameAlphaNumeric:", nameAlphaNumeric, "\nnameLength:", nameLength)
 	if !pswdLowercase || !pswdUppercase || !pswdNumber || !pswdSpecial || !pswdLength || !pswdNoSpaces || !nameAlphaNumeric || !nameLength {
-		tpl.ExecuteTemplate(w, "register.html", "please check username and password criteria")
+		tpl.ExecuteTemplate(w, "register.html", "Password doesn't meet criteria")
 		return
 	}
 	// check if username already exists for availability
@@ -145,7 +148,6 @@ func registerAuthHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	fmt.Fprint(w, "congrats, your account has been successfully created")
 }
-
 
 /*  old
 (forever 21 API)
