@@ -1,4 +1,5 @@
-##Backend Sprint 4
+Backend Sprint 4
+
 This Go program implements a simple web application that allows users to register new accounts and log in with existing ones. It uses a MySQL database to store user information, including usernames and bcrypt-hashed passwords.
 
 The program consists of four main functions: loginHandler, loginAuthHandler, registerHandler, and registerAuthHandler. These functions handle the different parts of the login and registration process.
